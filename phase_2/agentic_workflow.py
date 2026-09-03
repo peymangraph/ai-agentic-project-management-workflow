@@ -349,20 +349,28 @@ def _select_structurally_valid_response(
     validator,
     role_name: str,
 ) -> str:
-    """Return a rubric-valid response even when the LLM evaluator gives a false negative.
+    """Return the best rubric-valid response after the evaluator loop.
 
-    The EvaluationAgent is still always executed, preserving the required evaluator
-    workflow. For machine-checkable output structures, deterministic validation is the
-    final authority so an LLM cannot reject labels or templates that are visibly present.
-    The evaluator's revised response is preferred; the original worker response is used
-    as a fallback if evaluator iterations accidentally degrade an initially valid artifact.
+    EvaluationAgent is always executed, preserving the rubric-required evaluator
+    workflow. If the evaluator ends in PASS, prefer its final response when it also
+    passes deterministic structure validation. If the evaluator ends in FAIL/UNKNOWN,
+    prefer the original worker artifact when it is already structurally valid; this
+    prevents correction iterations from degrading good project artifacts into meta-fixes.
     """
     verdict = _evaluation_verdict(evaluation_result)
     final_response = str(evaluation_result.get("final_response", "")).strip()
-    candidates = [
-        ("EvaluationAgent final response", final_response),
-        ("initial knowledge-agent response", initial_response.strip()),
-    ]
+    initial_response = initial_response.strip()
+
+    if verdict == "PASS":
+        candidates = [
+            ("EvaluationAgent final response", final_response),
+            ("initial knowledge-agent response", initial_response),
+        ]
+    else:
+        candidates = [
+            ("initial knowledge-agent response", initial_response),
+            ("EvaluationAgent final response", final_response),
+        ]
 
     validation_errors: list[str] = []
     for source_name, candidate in candidates:
@@ -376,11 +384,16 @@ def _select_structurally_valid_response(
 
         if verdict == "PASS" and source_name == "EvaluationAgent final response":
             print(f"[Validation] {role_name}: LLM evaluation PASS + deterministic structure PASS.")
+        elif source_name == "initial knowledge-agent response" and verdict != "PASS":
+            print(
+                f"[Validation] {role_name}: original worker artifact passes deterministic rubric "
+                f"validation; LLM final verdict was {verdict or 'UNKNOWN'}. Preserving the original "
+                "artifact rather than an evaluator-induced rewrite."
+            )
         else:
             print(
                 f"[Validation] {role_name}: deterministic rubric validation PASS for "
-                f"{source_name}; LLM final verdict was {verdict or 'UNKNOWN'}. "
-                "Accepting the structurally compliant artifact and ignoring the false-negative verdict."
+                f"{source_name}; LLM final verdict was {verdict or 'UNKNOWN'}."
             )
         return candidate
 
