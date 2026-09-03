@@ -74,7 +74,7 @@ Status legend:
   - `final_response`
   - `evaluation`
   - `iterations`
-- [ ] Improve verdict consistency and regenerate cleaner evidence. See **Issue #8**.
+- [x] Uses machine-checkable `PASS`/`FAIL` verdicts and clean regenerated evidence. **Issue #8 completed.**
 
 #### RoutingAgent
 
@@ -125,7 +125,7 @@ Status legend:
 - [x] Direct Prompt evidence explains its general-LLM knowledge source.
 - [x] Augmented Prompt evidence discusses knowledge source and persona impact.
 - [x] Knowledge Augmented evidence confirms that supplied knowledge was used.
-- [ ] Replace the current EvaluationAgent evidence after Issue #8 is completed.
+- [x] EvaluationAgent evidence is clean, contains no traceback/assertion, ends with `PASS`, and accepts `London` only.
 
 ---
 
@@ -277,12 +277,6 @@ These are suggestions from the rubric, not mandatory submission requirements.
 
 ## 7. Remaining Open Work
 
-### Issue #8 — EvaluationAgent verdict consistency
-
-- [ ] Make evaluator verdicts deterministic/machine-checkable.
-- [ ] Prevent contradictory verdict/reason combinations from driving the refinement loop.
-- [ ] Regenerate `submission_outputs/05-evaluation-agent.txt`.
-
 ### Issue #9 — Phase 2 planning clarity
 
 - [ ] Reduce the primary plan to clearly routed Product Manager → Program Manager → Development Engineer stages.
@@ -317,7 +311,7 @@ These are suggestions from the rubric, not mandatory submission requirements.
 
 ### Recommended cleanup before final submission
 
-- Complete **Issue #8** to make EvaluationAgent evidence cleaner and more defensible.
+- **Issue #8 completed:** EvaluationAgent evidence is now deterministic, clean, and validated.
 - Complete **Issue #9** to make the Phase 2 routing demonstration easier for a reviewer to follow.
 
 ### Optional standout work
@@ -325,4 +319,4 @@ These are suggestions from the rubric, not mandatory submission requirements.
 - **Issue #10** — alternate-prompt adaptability demonstration.
 - **Issue #11** — richer evaluation/scoring.
 
-The project currently satisfies the mandatory rubric. Issues #8 and #9 are quality improvements recommended before submission; Issues #10 and #11 are optional standout enhancements.
+The project satisfies the mandatory rubric. Issue #9 remains a recommended quality improvement before submission; Issues #10 and #11 are optional standout enhancements.
