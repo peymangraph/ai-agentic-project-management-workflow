@@ -122,6 +122,12 @@ persona_program_manager = (
 )
 knowledge_program_manager = (
     "Features of a product are defined by organizing similar user stories into cohesive groups. "
+    "Every feature must remain grounded in the supplied product specification and validated user "
+    "stories; do not replace product behavior with generic infrastructure-monitoring concepts. "
+    "For the Email Router pilot, emphasize product capabilities such as email ingestion, message "
+    "classification, knowledge-base retrieval, RAG-based response generation, SME routing, "
+    "response-time and routing-accuracy dashboard metrics, knowledge-base/routing-rule configuration, "
+    "manual override, privacy, and compliance where supported by the specification. "
     "Each feature must contain exactly these required field labels: Feature Name:, Description:, "
     "Key Functionality:, and User Benefit:. Put each field on its own line."
 )
@@ -326,6 +332,29 @@ def _validate_program_manager_output(text: str) -> None:
     )
 
 
+def _validate_email_router_grounding(text: str) -> None:
+    """Reject structurally valid feature output that drifts away from the Email Router spec.
+
+    The reviewer identified a prior evaluator rewrite that replaced Email Router dashboard
+    behavior with generic CPU, memory, disk, and network monitoring. Requiring several core
+    Email Router concepts gives the candidate-selection step a lightweight semantic guardrail.
+    """
+    required_terms = ("email", "routing", "classification", "response", "dashboard")
+    normalized = text.lower()
+    matched_terms = [term for term in required_terms if term in normalized]
+    if len(matched_terms) < 3:
+        raise RuntimeError(
+            "Program Manager output is structurally valid but not grounded in the Email Router "
+            f"specification. Matched core terms: {matched_terms}"
+        )
+
+
+def _validate_program_manager_grounded_output(text: str) -> None:
+    """Require both rubric field structure and Email Router semantic grounding."""
+    _validate_program_manager_output(text)
+    _validate_email_router_grounding(text)
+
+
 def _validate_development_engineer_output(text: str) -> None:
     """Validate the rubric-required fields for every generated engineering task."""
     _validate_labeled_blocks(
@@ -432,19 +461,27 @@ def product_manager_support_function(query: str) -> str:
 
 
 def program_manager_support_function(query: str) -> str:
-    """Generate, evaluate, and validate product features using prior user stories."""
-    # Because KnowledgeAugmentedPromptAgent is instructed to use only its supplied
-    # knowledge, explicitly carry the validated upstream artifact into that knowledge.
+    """Generate, evaluate, and validate Email Router features using spec + prior stories."""
+    # KnowledgeAugmentedPromptAgent is instructed to use only supplied knowledge, so the
+    # Program Manager receives both the authoritative product spec and validated stories.
     program_manager_knowledge_agent.knowledge = (
         knowledge_program_manager
+        + "\n\nPRODUCT SPECIFICATION:\n"
+        + product_spec
         + "\n\nVALIDATED USER STORIES TO ORGANIZE:\n"
         + workflow_context["user_stories"]
     )
     contextual_query = (
         f"{query}\n\n"
-        "Organize the validated user stories into one or more cohesive product features. "
-        "For every feature, output Feature Name:, Description:, Key Functionality:, and "
-        "User Benefit: on separate lines."
+        "Create a coherent set of Email Router product features grounded only in the supplied "
+        "product specification and validated user stories. Cover email ingestion, message "
+        "classification, knowledge-base retrieval and RAG-based response generation, SME routing, "
+        "dashboard metrics such as response times and routing accuracy/workflow bottlenecks, "
+        "knowledge-base and routing-rule configuration, and manual override where relevant. "
+        "Include privacy/compliance capabilities when supported by the specification. Do not "
+        "substitute generic infrastructure monitoring such as CPU, memory, disk-space, or network-"
+        "traffic dashboards for the Email Router's product metrics. For every feature, output "
+        "Feature Name:, Description:, Key Functionality:, and User Benefit: on separate lines."
     )
     response_from_knowledge_agent = program_manager_knowledge_agent.respond(contextual_query)
     evaluation_result = program_manager_evaluation_agent.evaluate(
@@ -454,9 +491,10 @@ def program_manager_support_function(query: str) -> str:
     final_response = _select_structurally_valid_response(
         response_from_knowledge_agent,
         evaluation_result,
-        _validate_program_manager_output,
+        _validate_program_manager_grounded_output,
         "Program Manager",
     )
+    _validate_program_manager_grounded_output(final_response)
     workflow_context["features"] = final_response
     return final_response
 
