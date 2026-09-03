@@ -45,5 +45,22 @@ evaluation_agent = EvaluationAgent(
 print("=== EvaluationAgent Test ===")
 print(f"Prompt: {prompt}")
 evaluation_result = evaluation_agent.evaluate(prompt)
+
+# The intentionally supplied knowledge says London. The evaluator may accept a
+# trailing period, but it must not accept a sentence or unrelated explanation.
+normalized_final_response = evaluation_result["final_response"].strip().rstrip(".").strip()
+if normalized_final_response != "London":
+    raise AssertionError(
+        "EvaluationAgent accepted a response that did not satisfy the city-name-only "
+        f"criterion. Final response: {evaluation_result['final_response']!r}"
+    )
+
+if not evaluation_result["evaluation"].splitlines()[0].strip().upper() == "PASS":
+    raise AssertionError(
+        "EvaluationAgent did not finish with an explicit PASS verdict. "
+        f"Evaluation: {evaluation_result['evaluation']!r}"
+    )
+
 print("Evaluation result:")
 print(evaluation_result)
+print("Validation: PASS verdict received and final accepted answer is London only.")
