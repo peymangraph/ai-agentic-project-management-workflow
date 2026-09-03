@@ -1,161 +1,328 @@
-# Udacity Submission Rubric Checklist
+# Udacity Agentic AI Project Rubric Checklist
 
-Use this checklist before final submission.
+This checklist tracks the current repository against the Udacity project rubric and separates **mandatory submission requirements** from **optional standout improvements**.
 
-## Phase 1 — Agentic Toolkit
+Status legend:
 
-### Agent Implementation
+- `[x]` verified complete in the current repository and/or committed execution evidence
+- `[ ]` remaining work
+- `Optional` items are not required to satisfy the core rubric
 
-- [ ] `DirectPromptAgent` implemented in `workflow_agents/base_agents.py`
-- [ ] `AugmentedPromptAgent` implemented
-- [ ] `KnowledgeAugmentedPromptAgent` implemented
-- [ ] `EvaluationAgent` implemented
-- [ ] `RoutingAgent` implemented
-- [ ] `ActionPlanningAgent` implemented
-- [ ] Provided `RAGKnowledgePromptAgent` retained and understood
-- [ ] Every student-implemented agent has an `__init__` with required attributes
-- [ ] Every agent exposes the required public method (`respond`, `evaluate`, `route`, or `extract_steps_from_prompt`)
+---
 
-### LLM Configuration
+## 1. The Agentic Toolkit — Agent Implementation
 
-- [ ] API key is passed/configured securely and is not hardcoded in agent classes
-- [ ] Direct LLM interactions use `gpt-3.5-turbo` unless instructions specify otherwise
-- [ ] `RoutingAgent` uses `text-embedding-3-large`
-- [ ] `EvaluationAgent` uses `temperature=0` for evaluation and correction-instruction calls
+### Required agent classes
 
-### Agent-Specific Requirements
+- [x] `DirectPromptAgent` is defined in `workflow_agents/base_agents.py`.
+- [x] `AugmentedPromptAgent` is defined in `workflow_agents/base_agents.py`.
+- [x] `KnowledgeAugmentedPromptAgent` is defined in `workflow_agents/base_agents.py`.
+- [x] `EvaluationAgent` is defined in `workflow_agents/base_agents.py`.
+- [x] `RoutingAgent` is defined in `workflow_agents/base_agents.py`.
+- [x] `ActionPlanningAgent` is defined in `workflow_agents/base_agents.py`.
+- [x] The provided `RAGKnowledgePromptAgent` is included and executable.
+- [x] Every student-implemented agent includes an `__init__` method with the required attributes.
+- [x] Every required agent exposes its required primary public method:
+  - `respond()` for prompt agents
+  - `evaluate()` for `EvaluationAgent`
+  - `route()` for `RoutingAgent`
+  - `extract_steps_from_prompt()` for `ActionPlanningAgent`
+- [x] Public methods return the rubric-required output type: text, dictionary, route response, or list of steps.
+
+### LLM interaction and API configuration
+
+- [x] Direct LLM calls use `gpt-3.5-turbo` unless another model is specifically required.
+- [x] `RoutingAgent` embeddings use `text-embedding-3-large`.
+- [x] RAG embeddings use `text-embedding-3-large`.
+- [x] API keys are passed to agent instances and are not hardcoded inside agent classes.
+- [x] Repository-level `.env` is ignored by Git.
+- [x] `.env.example` documents the required environment variable without exposing a real credential.
+- [x] `EvaluationAgent` uses `temperature=0` for evaluation calls.
+- [x] `EvaluationAgent` uses `temperature=0` for correction-instruction calls.
+
+### Agent-specific prompt engineering and core logic
 
 #### DirectPromptAgent
-- [ ] Sends only a user message
-- [ ] Does not use a system prompt
-- [ ] Returns only response text
+
+- [x] Passes the user prompt directly as a user message.
+- [x] Does not use a system prompt.
+- [x] Returns only response text.
 
 #### AugmentedPromptAgent
-- [ ] Stores persona
-- [ ] System prompt establishes persona
-- [ ] System prompt instructs model to forget prior context
-- [ ] Returns only response text
+
+- [x] Stores and uses a persona.
+- [x] Uses a system prompt to establish the persona.
+- [x] Instructs the model to forget previous context.
+- [x] Returns only response text.
 
 #### KnowledgeAugmentedPromptAgent
-- [ ] Stores persona and knowledge
-- [ ] System prompt says to forget previous context
-- [ ] System prompt says to use only provided knowledge
-- [ ] Returns only response text
+
+- [x] Stores persona and explicit knowledge.
+- [x] Uses a system prompt that establishes the persona.
+- [x] Instructs the model to forget previous context.
+- [x] Instructs the model to use only the supplied knowledge.
+- [x] Returns only response text.
 
 #### EvaluationAgent
-- [ ] Loops up to `max_interactions`
-- [ ] Retrieves worker response
-- [ ] Evaluates response against explicit criteria
-- [ ] Generates correction instructions when needed
-- [ ] Returns dictionary with final response, evaluation result, and iteration count
+
+- [x] Implements a bounded iterative loop up to `max_interactions`.
+- [x] Obtains a response from the worker agent.
+- [x] Evaluates the worker response against explicit criteria.
+- [x] Generates correction instructions when the response fails evaluation.
+- [x] Requests a revised worker response after failure.
+- [x] Returns a dictionary containing:
+  - `final_response`
+  - `evaluation`
+  - `iterations`
+- [ ] Improve verdict consistency and regenerate cleaner evidence. See **Issue #8**.
 
 #### RoutingAgent
-- [ ] Embeds user prompt
-- [ ] Embeds every route description
-- [ ] Computes cosine similarity
-- [ ] Selects highest-scoring route
-- [ ] Invokes selected route's callable function
-- [ ] Returns selected agent response
+
+- [x] Embeds the user prompt.
+- [x] Embeds each route description.
+- [x] Computes cosine similarity.
+- [x] Selects the highest-scoring route.
+- [x] Calls the selected route's `func`.
+- [x] Returns the selected agent's response.
 
 #### ActionPlanningAgent
-- [ ] Uses an Action Planning Agent system role
-- [ ] Uses supplied knowledge
-- [ ] Uses `gpt-3.5-turbo`
-- [ ] Parses LLM output into a clean list of actionable steps
 
-## Phase 1 — Testing Evidence
+- [x] Uses an Action Planning Agent system role.
+- [x] Uses the supplied knowledge.
+- [x] Uses `gpt-3.5-turbo`.
+- [x] Processes the LLM response into a clean list of actionable steps.
 
-- [ ] Direct Prompt Agent test script
-- [ ] Augmented Prompt Agent test script
-- [ ] Knowledge Augmented Prompt Agent test script
-- [ ] RAG Knowledge Prompt Agent test script
-- [ ] Evaluation Agent test script
-- [ ] Routing Agent test script
-- [ ] Action Planning Agent test script
-- [ ] Seven successful terminal-output screenshots or text files collected
-- [ ] Direct Prompt evidence explains general LLM knowledge source
-- [ ] Augmented Prompt evidence discusses knowledge source and persona impact
-- [ ] Knowledge Augmented evidence confirms provided knowledge was used
+---
 
-## Phase 2 — Setup
+## 2. The Agentic Toolkit — Agent Testing
 
-- [ ] `agentic_workflow.py` imports `ActionPlanningAgent`
-- [ ] Imports `KnowledgeAugmentedPromptAgent`
-- [ ] Imports `EvaluationAgent`
-- [ ] Imports `RoutingAgent`
-- [ ] Loads `OPENAI_API_KEY` from environment
-- [ ] Loads `Product-Spec-Email-Router.txt` into `product_spec`
-- [ ] Instantiates Action Planning Agent with `knowledge_action_planning`
-- [ ] Appends `product_spec` to `knowledge_product_manager`
+### Required standalone tests
 
-## Phase 2 — Specialized Teams
+- [x] Separate test for `DirectPromptAgent`.
+- [x] Separate test for `AugmentedPromptAgent`.
+- [x] Separate test for `KnowledgeAugmentedPromptAgent`.
+- [x] Separate test for `EvaluationAgent`.
+- [x] Separate test for `RoutingAgent`.
+- [x] Separate test for `ActionPlanningAgent`.
+- [x] Separate execution test for the provided `RAGKnowledgePromptAgent`.
 
-### Product Manager
-- [ ] Product Manager knowledge agent instantiated with correct persona/knowledge
-- [ ] Product Manager EvaluationAgent uses exact required criteria
-- [ ] Output format: `As a [type of user], I want [an action or feature] so that [benefit/value].`
+### Test-script behavior
 
-### Program Manager
-- [ ] Program Manager knowledge agent instantiated
-- [ ] Program Manager EvaluationAgent instantiated
-- [ ] Output contains `Feature Name:`
-- [ ] Output contains `Description:`
-- [ ] Output contains `Key Functionality:`
-- [ ] Output contains `User Benefit:`
+- [x] Tests import from `workflow_agents.base_agents`.
+- [x] Tests instantiate agents with the required parameters.
+- [x] Tests call each agent's primary public method.
+- [x] Tests print the prompt and/or relevant response output.
 
-### Development Engineer
-- [ ] Development Engineer knowledge agent instantiated
-- [ ] Development Engineer EvaluationAgent instantiated
-- [ ] Output contains `Task ID:`
-- [ ] Output contains `Task Title:`
-- [ ] Output contains `Related User Story:`
-- [ ] Output contains `Description:`
-- [ ] Output contains `Acceptance Criteria:`
-- [ ] Output contains `Estimated Effort:`
-- [ ] Output contains `Dependencies:`
+### Successful execution evidence
 
-## Phase 2 — Routing
+- [x] `submission_outputs/01-direct-prompt.txt`
+- [x] `submission_outputs/02-augmented-prompt.txt`
+- [x] `submission_outputs/03-knowledge-augmented-prompt.txt`
+- [x] `submission_outputs/04-rag-knowledge-prompt.txt`
+- [x] `submission_outputs/05-evaluation-agent.txt`
+- [x] `submission_outputs/06-routing-agent.txt`
+- [x] `submission_outputs/07-action-planning-agent.txt`
+- [x] Direct Prompt evidence explains its general-LLM knowledge source.
+- [x] Augmented Prompt evidence discusses knowledge source and persona impact.
+- [x] Knowledge Augmented evidence confirms that supplied knowledge was used.
+- [ ] Replace the current EvaluationAgent evidence after Issue #8 is completed.
 
-- [ ] `RoutingAgent` instantiated
-- [ ] `.agents` contains route dictionaries for Product Manager, Program Manager, Development Engineer
-- [ ] Every route has `name`
-- [ ] Every route has `description`
-- [ ] Every route has `func`
-- [ ] Route descriptions clearly distinguish responsibilities
+---
 
-## Phase 2 — Support Functions
+## 3. Project Management Workflow — Setup and Agent Instantiation
 
-- [ ] `product_manager_support_function(query)` implemented
-- [ ] `program_manager_support_function(query)` implemented
-- [ ] `development_engineer_support_function(query)` implemented
-- [ ] Each support function calls the corresponding knowledge agent's `.respond(query)`
-- [ ] Each passes the result to the corresponding EvaluationAgent `.evaluate(...)`
-- [ ] Each returns the validated `final_response`
+### Initial setup
 
-## Phase 2 — Workflow Execution
+- [x] `agentic_workflow.py` imports `ActionPlanningAgent`.
+- [x] `agentic_workflow.py` imports `KnowledgeAugmentedPromptAgent`.
+- [x] `agentic_workflow.py` imports `EvaluationAgent`.
+- [x] `agentic_workflow.py` imports `RoutingAgent`.
+- [x] `OPENAI_API_KEY` is loaded from the environment.
+- [x] `Product-Spec-Email-Router.txt` is loaded into `product_spec`.
 
-- [ ] Action planner generates `workflow_steps` from `workflow_prompt`
-- [ ] `completed_steps = []` initialized
-- [ ] Workflow iterates through every step
-- [ ] Current step is printed
-- [ ] `routing_agent.route(step)` is called
-- [ ] Result is appended to `completed_steps`
-- [ ] Current result is printed
-- [ ] Final workflow output is printed
-- [ ] Final Email Router output includes user stories, features, and engineering tasks
+### Core and specialist agent instantiation
 
-## Code Quality
+- [x] `ActionPlanningAgent` is instantiated with `knowledge_action_planning`.
+- [x] `knowledge_product_manager` appends the Email Router `product_spec`.
+- [x] Product Manager `KnowledgeAugmentedPromptAgent` uses `persona_product_manager` and completed `knowledge_product_manager`.
+- [x] Program Manager `KnowledgeAugmentedPromptAgent` uses `persona_program_manager` and `knowledge_program_manager`.
+- [x] Development Engineer `KnowledgeAugmentedPromptAgent` uses `persona_dev_engineer` and `knowledge_dev_engineer`.
 
-- [ ] Descriptive variable/function names
-- [ ] Python naming conventions followed
-- [ ] Classes/functions contain useful docstrings or comments
-- [ ] `base_agents.py` is organized by agent class
-- [ ] `agentic_workflow.py` is logically organized by setup, agents, support functions, and execution
-- [ ] No secrets committed
+### Evaluation agents
 
-## Optional Standout Improvements
+#### Product Manager EvaluationAgent
 
-- [ ] Demonstrate a modified `workflow_prompt`
-- [ ] Add richer evaluation/scoring criteria
-- [ ] Add basic error handling or logging
-- [ ] Add `reflection.md` discussing strengths, limitations, and one concrete improvement
+- [x] Uses the required evaluation-agent persona.
+- [x] Uses the required user-story structure criterion:
+  - `As a [type of user], I want [an action or feature] so that [benefit/value].`
+- [x] Uses `product_manager_knowledge_agent` as the worker/agent to evaluate.
+
+#### Program Manager EvaluationAgent
+
+- [x] Uses `persona_program_manager_eval`.
+- [x] Requires `Feature Name:`.
+- [x] Requires `Description:`.
+- [x] Requires `Key Functionality:`.
+- [x] Requires `User Benefit:`.
+
+#### Development Engineer EvaluationAgent
+
+- [x] Uses `persona_dev_engineer_eval`.
+- [x] Requires `Task ID:`.
+- [x] Requires `Task Title:`.
+- [x] Requires `Related User Story:`.
+- [x] Requires `Description:`.
+- [x] Requires `Acceptance Criteria:`.
+- [x] Requires `Estimated Effort:`.
+- [x] Requires `Dependencies:`.
+
+### Routing Agent configuration
+
+- [x] `RoutingAgent` is instantiated.
+- [x] `.agents` is assigned a list of route dictionaries.
+- [x] Product Manager route exists.
+- [x] Program Manager route exists.
+- [x] Development Engineer route exists.
+- [x] Every route contains `name`.
+- [x] Every route contains `description`.
+- [x] Every route contains `func`.
+- [x] Route descriptions distinguish user stories, features, and engineering tasks.
+
+---
+
+## 4. Project Management Workflow — Workflow Logic and Execution
+
+### Support functions
+
+- [x] `product_manager_support_function(query)` exists.
+- [x] `program_manager_support_function(query)` exists.
+- [x] `development_engineer_support_function(query)` exists.
+- [x] Each function accepts a routed query/step.
+- [x] Each function calls its corresponding Knowledge Augmented agent's `respond()` method.
+- [x] Each function passes the generated response to its corresponding `EvaluationAgent.evaluate()` call.
+- [x] Each function returns the validated `final_response`.
+
+### Main orchestration
+
+- [x] `action_planning_agent.extract_steps_from_prompt(workflow_prompt)` generates `workflow_steps`.
+- [x] `completed_steps` is initialized.
+- [x] The workflow iterates through every generated step.
+- [x] The current step is printed.
+- [x] `routing_agent.route(step)` is called for every step.
+- [x] Each routed result is appended to `completed_steps`.
+- [x] Each step result is printed.
+- [x] Final workflow output is printed after processing the steps.
+- [x] Full Phase 2 execution evidence is committed at `submission_outputs/08-agentic-workflow.txt`.
+- [ ] Simplify the primary Action Planning output to clearer user-story → feature → engineering-task stages and regenerate the Phase 2 evidence. See **Issue #9**.
+
+### Final Email Router output
+
+- [x] Final execution produces a project plan for the Email Router.
+- [x] User stories are present.
+- [x] User stories follow the required `As a..., I want..., so that...` structure.
+- [x] Product features are present.
+- [x] Product features contain `Feature Name`, `Description`, `Key Functionality`, and `User Benefit`.
+- [x] Engineering tasks are present.
+- [x] Engineering tasks contain all seven required fields.
+
+---
+
+## 5. Industry Best Practices
+
+### Readability and modularity
+
+- [x] Variable and function names are descriptive.
+- [x] Python naming conventions are generally followed.
+- [x] Agent classes contain useful docstrings/comments.
+- [x] Complex logic includes explanatory comments where appropriate.
+- [x] `base_agents.py` is organized into distinct agent classes.
+- [x] `agentic_workflow.py` is organized by setup, agent instantiation, support functions, routing, and execution.
+
+### Robustness
+
+- [x] Missing API key produces a clear error.
+- [x] Empty ActionPlanningAgent output produces a clear error.
+- [x] Routed workflow execution includes exception handling.
+- [x] A one-command PowerShell validation runner exists.
+- [x] Execution evidence is written to `submission_outputs/`.
+- [x] `reflection.md` documents strengths, limitations, and one concrete improvement.
+
+---
+
+## 6. Optional Standout Improvements
+
+These are suggestions from the rubric, not mandatory submission requirements.
+
+### Workflow adaptability
+
+- [x] Primary `workflow_prompt` was changed from the starter wording to request a complete development plan.
+- [ ] Add a second alternate-prompt demonstration and document how routing/output changes. See **Issue #10**.
+
+### Richer evaluation
+
+- [ ] Add richer structured evaluation/scoring for at least one specialist role while preserving the required EvaluationAgent behavior. See **Issue #11**.
+
+### Error handling/logging
+
+- [x] Basic workflow error handling is present.
+
+### Reflection
+
+- [x] `reflection.md` exists.
+- [x] Reflection discusses strengths.
+- [x] Reflection discusses limitations.
+- [x] Reflection identifies a concrete future improvement involving structured state/schema validation.
+
+---
+
+## 7. Remaining Open Work
+
+### Issue #8 — EvaluationAgent verdict consistency
+
+- [ ] Make evaluator verdicts deterministic/machine-checkable.
+- [ ] Prevent contradictory verdict/reason combinations from driving the refinement loop.
+- [ ] Regenerate `submission_outputs/05-evaluation-agent.txt`.
+
+### Issue #9 — Phase 2 planning clarity
+
+- [ ] Reduce the primary plan to clearly routed Product Manager → Program Manager → Development Engineer stages.
+- [ ] Regenerate `submission_outputs/08-agentic-workflow.txt`.
+
+### Issue #10 — Optional alternate prompt demonstration
+
+- [ ] Run a second planning prompt through the same agentic architecture.
+- [ ] Save separate evidence and document adaptation.
+
+### Issue #11 — Optional richer evaluation/scoring
+
+- [ ] Add structured quality dimensions or a simple scoring layer for one specialist role.
+- [ ] Preserve all mandatory EvaluationAgent outputs and behavior.
+
+---
+
+## 8. Submission Readiness Summary
+
+### Mandatory rubric
+
+- Agent implementation: **Complete**
+- Agent configuration and prompting: **Complete**
+- Seven test scripts: **Complete**
+- Seven execution evidence files: **Complete**
+- Phase 2 setup and specialist instantiation: **Complete**
+- Routing configuration: **Complete**
+- Support functions: **Complete**
+- Workflow orchestration: **Complete**
+- Structured Email Router output: **Complete**
+- Code quality/documentation: **Complete**
+
+### Recommended cleanup before final submission
+
+- Complete **Issue #8** to make EvaluationAgent evidence cleaner and more defensible.
+- Complete **Issue #9** to make the Phase 2 routing demonstration easier for a reviewer to follow.
+
+### Optional standout work
+
+- **Issue #10** — alternate-prompt adaptability demonstration.
+- **Issue #11** — richer evaluation/scoring.
+
+The project currently satisfies the mandatory rubric. Issues #8 and #9 are quality improvements recommended before submission; Issues #10 and #11 are optional standout enhancements.
