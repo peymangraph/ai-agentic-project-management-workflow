@@ -200,7 +200,7 @@ Status legend:
 - [x] Each function accepts a routed query/step.
 - [x] Each function calls its corresponding Knowledge Augmented agent's `respond()` method.
 - [x] Each function passes the generated response to its corresponding `EvaluationAgent.evaluate()` call.
-- [x] Each function returns the validated `final_response`.
+- [x] Each function returns a validated structurally compliant response.
 
 ### Main orchestration
 
@@ -213,7 +213,7 @@ Status legend:
 - [x] Each step result is printed.
 - [x] Final workflow output is printed after processing the steps.
 - [x] Full Phase 2 execution evidence is committed at `submission_outputs/08-agentic-workflow.txt`.
-- [ ] Simplify the primary Action Planning output to clearer user-story → feature → engineering-task stages and regenerate the Phase 2 evidence. See **Issue #9**.
+- [x] Primary Action Planning output is simplified to three clear user-story → feature → engineering-task stages, with verified routing and regenerated evidence. **Issue #9 completed.**
 
 ### Final Email Router output
 
@@ -224,6 +224,8 @@ Status legend:
 - [x] Product features contain `Feature Name`, `Description`, `Key Functionality`, and `User Benefit`.
 - [x] Engineering tasks are present.
 - [x] Engineering tasks contain all seven required fields.
+- [x] Final Phase 2 evidence reaches `=== FINAL WORKFLOW OUTPUT ===` with no traceback or routed-step error.
+- [x] Final Development Engineer output preserves substantive Email Router engineering tasks rather than evaluator-generated meta-repair tasks.
 
 ---
 
@@ -236,7 +238,7 @@ Status legend:
 - [x] Agent classes contain useful docstrings/comments.
 - [x] Complex logic includes explanatory comments where appropriate.
 - [x] `base_agents.py` is organized into distinct agent classes.
-- [x] `agentic_workflow.py` is organized by setup, agent instantiation, support functions, routing, and execution.
+- [x] `agentic_workflow.py` is organized by setup, agent instantiation, support functions, routing, validation, and execution.
 
 ### Robustness
 
@@ -245,6 +247,7 @@ Status legend:
 - [x] Routed workflow execution includes exception handling.
 - [x] A one-command PowerShell validation runner exists.
 - [x] Execution evidence is written to `submission_outputs/`.
+- [x] Deterministic structural validation guards against incorrect LLM evaluator verdicts.
 - [x] `reflection.md` documents strengths, limitations, and one concrete improvement.
 
 ---
@@ -277,10 +280,7 @@ These are suggestions from the rubric, not mandatory submission requirements.
 
 ## 7. Remaining Open Work
 
-### Issue #9 — Phase 2 planning clarity
-
-- [ ] Reduce the primary plan to clearly routed Product Manager → Program Manager → Development Engineer stages.
-- [ ] Regenerate `submission_outputs/08-agentic-workflow.txt`.
+Only optional standout improvements remain.
 
 ### Issue #10 — Optional alternate prompt demonstration
 
@@ -311,12 +311,12 @@ These are suggestions from the rubric, not mandatory submission requirements.
 
 ### Recommended cleanup before final submission
 
-- **Issue #8 completed:** EvaluationAgent evidence is now deterministic, clean, and validated.
-- Complete **Issue #9** to make the Phase 2 routing demonstration easier for a reviewer to follow.
+- **Issue #8 completed:** EvaluationAgent evidence is deterministic, clean, and validated.
+- **Issue #9 completed:** Phase 2 now demonstrates the intended three-stage Product Manager → Program Manager → Development Engineer progression with clean execution evidence.
 
 ### Optional standout work
 
 - **Issue #10** — alternate-prompt adaptability demonstration.
 - **Issue #11** — richer evaluation/scoring.
 
-The project satisfies the mandatory rubric. Issue #9 remains a recommended quality improvement before submission; Issues #10 and #11 are optional standout enhancements.
+The project satisfies the mandatory rubric and the two recommended quality improvements (#8 and #9) are complete. Only optional standout enhancements (#10 and #11) remain.
