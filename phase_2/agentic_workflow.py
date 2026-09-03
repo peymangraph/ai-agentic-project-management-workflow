@@ -296,9 +296,20 @@ def _repair_user_story_output(draft: str, query: str) -> str:
     return repaired
 
 
+def _count_field_labels(text: str, label: str) -> int:
+    """Count a rubric field only when it appears as a line-leading label.
+
+    This avoids false counts from values such as ``Dependencies: Task ID: 2`` while
+    still accepting plain labels, Markdown-bold labels, and list-prefixed labels.
+    """
+    escaped = re.escape(label)
+    pattern = rf"(?m)^\s*(?:[-*]\s*)?(?:\*\*)?{escaped}(?:\*\*)?\s*"
+    return len(re.findall(pattern, text))
+
+
 def _validate_labeled_blocks(text: str, required_labels: tuple[str, ...], artifact: str) -> None:
     """Verify that every feature/task block contains all rubric-required field labels."""
-    counts = {label: text.count(label) for label in required_labels}
+    counts = {label: _count_field_labels(text, label) for label in required_labels}
     first_count = counts[required_labels[0]]
     if first_count < 1 or any(count != first_count for count in counts.values()):
         raise RuntimeError(
