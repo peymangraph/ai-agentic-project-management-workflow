@@ -35,15 +35,22 @@ product_spec = product_spec_path.read_text(encoding="utf-8")
 
 
 # === Action Planning Agent ===
+# A complete development plan has three top-level artifact stages. Keeping these
+# stages explicit prevents the planner from expanding the rubric exercise into
+# unrelated project-administration activities such as staffing or scheduling.
 knowledge_action_planning = (
-    "Stories are defined from a product spec by identifying a "
-    "persona, an action, and a desired outcome for each story. "
-    "Each story represents a specific functionality of the product "
-    "described in the specification. \n"
-    "Features are defined by grouping related user stories. \n"
-    "Tasks are defined for each story and represent the engineering "
-    "work required to develop the product. \n"
-    "A development Plan for a product contains all these components"
+    "Stories are defined from a product spec by identifying a persona, an action, "
+    "and a desired outcome for each story. Each story represents a specific "
+    "functionality of the product described in the specification.\n"
+    "Features are defined by grouping related validated user stories.\n"
+    "Tasks are defined from the validated user stories and product features and "
+    "represent the engineering work required to develop the product.\n\n"
+    "A complete development plan contains exactly these three ordered top-level stages:\n"
+    "1. Define user stories for the product.\n"
+    "2. Organize the validated user stories into product features.\n"
+    "3. Create detailed engineering tasks for the validated user stories and product features.\n\n"
+    "Do not decompose these three stages into smaller substeps. Do not add staffing, "
+    "scheduling, prioritization, monitoring, testing, or retrospective activities."
 )
 
 action_planning_agent = ActionPlanningAgent(
@@ -225,38 +232,64 @@ routing_agent.agents = [
     {
         "name": "Product Manager",
         "description": (
-            "Responsible for defining product personas and user stories only. "
-            "Creates user stories in As a user, I want, so that format. "
-            "Does not define product features or engineering tasks."
+            "Define user stories for the product. Responsible for product personas and "
+            "user stories in As a user, I want, so that format. Does not define product "
+            "features or engineering tasks."
         ),
         "func": lambda query: product_manager_support_function(query),
     },
     {
         "name": "Program Manager",
         "description": (
-            "Responsible for organizing related user stories into product features. "
-            "Defines Feature Name, Description, Key Functionality, and User Benefit. "
-            "Does not create engineering implementation tasks."
+            "Organize validated user stories into product features. Defines Feature Name, "
+            "Description, Key Functionality, and User Benefit. Does not create engineering tasks."
         ),
         "func": lambda query: program_manager_support_function(query),
     },
     {
         "name": "Development Engineer",
         "description": (
-            "Responsible for turning user stories and product features into detailed "
-            "engineering development tasks with acceptance criteria, effort, and dependencies."
+            "Create detailed engineering tasks for validated user stories and product features, "
+            "including acceptance criteria, estimated effort, and dependencies."
         ),
         "func": lambda query: development_engineer_support_function(query),
     },
 ]
 
 
-# A TPM-style golden prompt that asks for the complete plan rather than only one
-# artifact type. Change this prompt to demonstrate workflow adaptability.
+# The primary rubric run requests the complete plan while explicitly asking for
+# top-level stages only. The ActionPlanningAgent still decides/extracts the steps;
+# the workflow does not hardcode routed results.
 workflow_prompt = (
-    "Create a complete development plan for this product. Define the user stories, "
-    "organize them into product features, and then create the detailed development tasks."
+    "Create a complete development plan for this product using only the three top-level "
+    "stages in your planning knowledge. Do not expand those stages into substeps."
 )
+
+
+def _validate_primary_workflow_steps(workflow_steps: list[str]) -> None:
+    """Fail clearly if the primary planner drifts away from the three rubric stages."""
+    if len(workflow_steps) != 3:
+        raise RuntimeError(
+            "The primary workflow must contain exactly three top-level stages: "
+            "user stories, product features, and engineering tasks. "
+            f"Received {len(workflow_steps)} steps: {workflow_steps}"
+        )
+
+    normalized_steps = [step.lower() for step in workflow_steps]
+    expected_concepts = (
+        ("user stor",),
+        ("feature",),
+        ("task",),
+    )
+
+    for index, (step, required_terms) in enumerate(
+        zip(normalized_steps, expected_concepts), start=1
+    ):
+        if not all(term in step for term in required_terms):
+            raise RuntimeError(
+                f"Workflow stage {index} is not clearly aligned with the expected "
+                f"rubric artifact. Received: {workflow_steps[index - 1]!r}"
+            )
 
 
 def run_workflow() -> list[str]:
@@ -268,6 +301,8 @@ def run_workflow() -> list[str]:
     workflow_steps = action_planning_agent.extract_steps_from_prompt(workflow_prompt)
     if not workflow_steps:
         raise RuntimeError("The ActionPlanningAgent returned no workflow steps.")
+
+    _validate_primary_workflow_steps(workflow_steps)
 
     print("Workflow steps:")
     for index, step in enumerate(workflow_steps, start=1):
