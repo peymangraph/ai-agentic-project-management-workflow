@@ -122,6 +122,8 @@ Status legend:
 - [x] `submission_outputs/05-evaluation-agent.txt`
 - [x] `submission_outputs/06-routing-agent.txt`
 - [x] `submission_outputs/07-action-planning-agent.txt`
+- [x] `submission_outputs/08-agentic-workflow.txt`
+- [x] `submission_outputs/09-standout-alternate-workflow.txt`
 - [x] Direct Prompt evidence explains its general-LLM knowledge source.
 - [x] Augmented Prompt evidence discusses knowledge source and persona impact.
 - [x] Knowledge Augmented evidence confirms that supplied knowledge was used.
@@ -259,11 +261,15 @@ These are suggestions from the rubric, not mandatory submission requirements.
 ### Workflow adaptability
 
 - [x] Primary `workflow_prompt` was changed from the starter wording to request a complete development plan.
-- [ ] Add a second alternate-prompt demonstration and document how routing/output changes. See **Issue #10**.
+- [x] A second security-and-compliance-focused prompt runs through the same ActionPlanningAgent + RoutingAgent architecture and is documented separately. **Issue #10 completed.**
+- [x] Standout evidence shows the same three-stage orchestration adapting its content toward privacy, access control, auditability, safe email handling, resilience, and compliance.
 
 ### Richer evaluation
 
-- [ ] Add richer structured evaluation/scoring for at least one specialist role while preserving the required EvaluationAgent behavior. See **Issue #11**.
+- [x] Product Manager output receives a supplemental structured quality score while preserving the mandatory EvaluationAgent behavior. **Issue #11 completed.**
+- [x] Quality dimensions are Format Compliance, Completeness, Traceability to Product Specification, and Clarity.
+- [x] Each dimension is scored out of 25 for a 100-point total.
+- [x] Final standout evidence records `100/100` and `Supplemental Decision: PASS`.
 
 ### Error handling/logging
 
@@ -275,22 +281,13 @@ These are suggestions from the rubric, not mandatory submission requirements.
 - [x] Reflection discusses strengths.
 - [x] Reflection discusses limitations.
 - [x] Reflection identifies a concrete future improvement involving structured state/schema validation.
+- [x] Reflection documents workflow adaptability and supplemental quality scoring.
 
 ---
 
 ## 7. Remaining Open Work
 
-Only optional standout improvements remain.
-
-### Issue #10 — Optional alternate prompt demonstration
-
-- [ ] Run a second planning prompt through the same agentic architecture.
-- [ ] Save separate evidence and document adaptation.
-
-### Issue #11 — Optional richer evaluation/scoring
-
-- [ ] Add structured quality dimensions or a simple scoring layer for one specialist role.
-- [ ] Preserve all mandatory EvaluationAgent outputs and behavior.
+**None.** All tracked quality and standout issues (#8, #9, #10, and #11) are completed and closed.
 
 ---
 
@@ -301,7 +298,7 @@ Only optional standout improvements remain.
 - Agent implementation: **Complete**
 - Agent configuration and prompting: **Complete**
 - Seven test scripts: **Complete**
-- Seven execution evidence files: **Complete**
+- Seven required agent execution evidence files: **Complete**
 - Phase 2 setup and specialist instantiation: **Complete**
 - Routing configuration: **Complete**
 - Support functions: **Complete**
@@ -309,14 +306,16 @@ Only optional standout improvements remain.
 - Structured Email Router output: **Complete**
 - Code quality/documentation: **Complete**
 
-### Recommended cleanup before final submission
+### Quality improvements
 
 - **Issue #8 completed:** EvaluationAgent evidence is deterministic, clean, and validated.
-- **Issue #9 completed:** Phase 2 now demonstrates the intended three-stage Product Manager → Program Manager → Development Engineer progression with clean execution evidence.
+- **Issue #9 completed:** Phase 2 demonstrates the intended three-stage Product Manager → Program Manager → Development Engineer progression with clean execution evidence.
 
 ### Optional standout work
 
-- **Issue #10** — alternate-prompt adaptability demonstration.
-- **Issue #11** — richer evaluation/scoring.
+- **Issue #10 completed:** Alternate security/compliance prompt demonstrates workflow adaptability through the same architecture.
+- **Issue #11 completed:** Supplemental Product Manager scoring evaluates four quality dimensions and records a final `100/100` PASS.
 
-The project satisfies the mandatory rubric and the two recommended quality improvements (#8 and #9) are complete. Only optional standout enhancements (#10 and #11) remain.
+### Final status
+
+The repository satisfies the mandatory Udacity rubric, includes clean committed Phase 1 and Phase 2 execution evidence, and also completes both optional standout enhancements. The tracked project work is complete and the repository is ready for final submission.
