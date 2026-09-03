@@ -286,11 +286,17 @@ class EvaluationAgent:
             raise ValueError("max_interactions must be greater than zero.")
 
     def _evaluate_response(self, worker_response: str) -> str:
+        """Evaluate a worker response using a strict PASS/FAIL protocol."""
         eval_prompt = (
-            f"Does the following answer meet the evaluation criteria?\n\n"
+            "Evaluate the answer strictly against every evaluation criterion below.\n\n"
             f"ANSWER:\n{worker_response}\n\n"
             f"EVALUATION CRITERIA:\n{self.evaluation_criteria}\n\n"
-            "Respond Yes or No, followed by a concise reason."
+            "Return exactly two parts:\n"
+            "1. On the first line, output exactly PASS or FAIL.\n"
+            "2. On the second line, output REASON: followed by a concise explanation.\n\n"
+            "Use PASS only when every criterion is satisfied. Use FAIL when any "
+            "criterion is not satisfied. Ensure the reason supports the verdict. "
+            "Do not use Yes/No and do not put any other text on the first line."
         )
         response = self.client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -300,12 +306,35 @@ class EvaluationAgent:
             ],
             temperature=0,
         )
-        return (response.choices[0].message.content or "").strip()
+        evaluation = (response.choices[0].message.content or "").strip()
+        # Validate immediately so malformed evaluator output can never be
+        # interpreted as a pass or silently enter the correction loop.
+        self._parse_verdict(evaluation)
+        return evaluation
+
+    @staticmethod
+    def _parse_verdict(evaluation: str) -> str:
+        """Return PASS/FAIL from the evaluator's machine-checkable first line."""
+        if not evaluation.strip():
+            raise ValueError("Evaluator returned an empty result.")
+
+        first_line = evaluation.splitlines()[0].strip().strip("*` ").upper()
+        if first_line not in {"PASS", "FAIL"}:
+            raise ValueError(
+                "Evaluator must return PASS or FAIL on the first line; "
+                f"received: {evaluation!r}"
+            )
+        return first_line
 
     def _correction_instructions(self, evaluation: str) -> str:
+        """Generate correction instructions after an explicit FAIL verdict only."""
+        if self._parse_verdict(evaluation) != "FAIL":
+            raise ValueError("Correction instructions may only be generated after FAIL.")
+
         instruction_prompt = (
-            "Provide precise instructions to fix an answer based on the following "
-            f"evaluation. Preserve correct content and change only what is needed:\n{evaluation}"
+            "The evaluator returned FAIL. Provide precise instructions to fix the "
+            "answer based on the evaluation below. Preserve correct content and "
+            f"change only what is needed:\n{evaluation}"
         )
         response = self.client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -346,9 +375,10 @@ class EvaluationAgent:
             print(f"Worker Agent Response:\n{response_from_worker}")
             print("Step 2: Evaluator agent judges the response")
             evaluation = self._evaluate_response(response_from_worker)
+            verdict = self._parse_verdict(evaluation)
             print(f"Evaluator Agent Evaluation:\n{evaluation}")
 
-            if evaluation.lower().startswith("yes"):
+            if verdict == "PASS":
                 print("Final solution accepted.")
                 return {
                     "final_response": response_from_worker,
@@ -356,6 +386,7 @@ class EvaluationAgent:
                     "iterations": i + 1,
                 }
 
+            # This branch is reachable only after an explicit FAIL verdict.
             print("Step 3: Generate correction instructions")
             instructions = self._correction_instructions(evaluation)
             print(f"Instructions to fix:\n{instructions}")
@@ -363,7 +394,7 @@ class EvaluationAgent:
             prompt_to_evaluate = (
                 f"The original prompt was: {initial_prompt}\n"
                 f"The response to that prompt was: {response_from_worker}\n"
-                "It has been evaluated as not meeting the criteria.\n"
+                "It received an explicit FAIL verdict against the evaluation criteria.\n"
                 f"Make only these corrections, preserving valid content: {instructions}"
             )
 
