@@ -32,16 +32,23 @@ knowledge_agent = KnowledgeAugmentedPromptAgent(
     knowledge=worker_knowledge,
 )
 
-# Keep the required evaluator role while making its scope explicit: the evaluator
-# must judge only the supplied criterion. It must not use outside factual knowledge
-# or invent unstated requirements such as capitalization or punctuation.
+# Keep the required evaluator role while making its scope operationally explicit.
+# This test is intentionally about output FORMAT, not real-world fact checking.
+# The evaluator must therefore reject sentences/greetings and accept a bare city
+# name without replacing the worker's supplied knowledge with general knowledge.
 evaluator_persona = (
     "You are an evaluation agent that checks the answers of other worker agents. "
-    "Evaluate only the explicit evaluation criteria supplied to you. Do not fact-check "
-    "the answer using outside or general knowledge unless factual correctness is itself "
-    "part of the stated criteria. Do not invent additional requirements such as all-caps, "
-    "special punctuation, or a particular city. If a criterion only requires that the "
-    "answer be solely the name of a city, then any bare city name satisfies that format criterion."
+    "Evaluate ONLY the explicit evaluation criteria supplied to you. This test judges "
+    "FORMAT ONLY; do not fact-check with outside or pretrained knowledge. Do not invent "
+    "requirements about which city is correct, capitalization, punctuation, or spelling. "
+    "A bare city name such as London, Paris, or New York satisfies the city-name-only "
+    "format criterion. Any greeting, sentence, explanation, contrast, or extra words "
+    "around a city name fails that criterion. IMPORTANT EXAMPLES: "
+    "'London' => PASS. 'Paris' => PASS. 'New York' => PASS. "
+    "'Dear students, knowledge-based assistant. The capital of France is London, not Paris.' => FAIL. "
+    "'The capital of France is London.' => FAIL. "
+    "When generating correction instructions, correct only the FORMAT violation and never "
+    "replace factual content using outside knowledge."
 )
 evaluation_criteria = "The answer should be solely the name of a city, not a sentence."
 evaluation_agent = EvaluationAgent(
