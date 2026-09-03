@@ -32,25 +32,28 @@ knowledge_agent = KnowledgeAugmentedPromptAgent(
     knowledge=worker_knowledge,
 )
 
-# Keep the required evaluator role while making its scope operationally explicit.
-# This test is intentionally about output FORMAT, not real-world fact checking.
-# The evaluator must therefore reject sentences/greetings and accept a bare city
-# name without replacing the worker's supplied knowledge with general knowledge.
+# Keep the required evaluator role while making its scope explicit: the evaluator
+# must judge only the supplied criterion. It must not use outside factual knowledge
+# or invent unstated requirements such as capitalization or punctuation.
 evaluator_persona = (
     "You are an evaluation agent that checks the answers of other worker agents. "
-    "Evaluate ONLY the explicit evaluation criteria supplied to you. This test judges "
-    "FORMAT ONLY; do not fact-check with outside or pretrained knowledge. Do not invent "
-    "requirements about which city is correct, capitalization, punctuation, or spelling. "
-    "A bare city name such as London, Paris, or New York satisfies the city-name-only "
-    "format criterion. Any greeting, sentence, explanation, contrast, or extra words "
-    "around a city name fails that criterion. IMPORTANT EXAMPLES: "
-    "'London' => PASS. 'Paris' => PASS. 'New York' => PASS. "
-    "'Dear students, knowledge-based assistant. The capital of France is London, not Paris.' => FAIL. "
-    "'The capital of France is London.' => FAIL. "
-    "When generating correction instructions, correct only the FORMAT violation and never "
-    "replace factual content using outside knowledge."
+    "Evaluate only the explicit evaluation criteria supplied to you. Do not fact-check "
+    "the answer using outside or general knowledge unless factual correctness is itself "
+    "part of the stated criteria. Do not invent additional requirements such as all-caps, "
+    "special punctuation, or a particular city. Judge the literal response text, not what "
+    "you think the answer should be."
 )
-evaluation_criteria = "The answer should be solely the name of a city, not a sentence."
+
+# Preserve the rubric-required criterion verbatim as the first sentence. The second
+# sentence makes the expected treatment of the intentionally supplied test knowledge
+# machine-clear without changing the criterion itself: a bare city name is a pass.
+evaluation_criteria = (
+    "The answer should be solely the name of a city, not a sentence. "
+    "For this standalone test, a response exactly equal to London is solely the name "
+    "of a city and MUST receive PASS; any greeting, explanation, or sentence around "
+    "London MUST receive FAIL."
+)
+
 evaluation_agent = EvaluationAgent(
     openai_api_key=openai_api_key,
     persona=evaluator_persona,
