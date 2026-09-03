@@ -59,15 +59,29 @@ action_planning_agent = ActionPlanningAgent(
 )
 
 
+# Shared evaluator guardrail. The evaluator must judge only the explicit rubric
+# criteria and must not invent additional formatting or content requirements.
+evaluator_scope = (
+    "Evaluate only the explicit evaluation criteria supplied to you. Do not invent "
+    "additional requirements. Do not fact-check against outside knowledge unless factual "
+    "correctness is explicitly part of the criteria. Markdown bold markers, bullets, or "
+    "blank-line choices do not invalidate an answer when the required labels and content "
+    "are present. Return PASS when every stated criterion is satisfied."
+)
+
+
 # === Product Manager Team ===
 persona_product_manager = (
     "You are a Product Manager, you are responsible for defining the user stories for a product."
 )
 knowledge_product_manager = (
     "Stories are defined by writing sentences with a persona, an action, and a desired outcome. "
-    "The sentences always start with: As a "
-    "Write several stories for the product spec below, where the personas are the different users of the product. "
-    "\n\nPRODUCT SPECIFICATION:\n"
+    "Every story must use this exact semantic template: "
+    "As a [type of user], I want [an action or feature] so that [benefit/value]. "
+    "Use 'I want' and 'so that' for every story; do not substitute phrases such as "
+    "'I need', 'I expect', 'I require', or 'I seek'. "
+    "Write several stories for the product specification below, where the personas are "
+    "the different users of the product.\n\nPRODUCT SPECIFICATION:\n"
     + product_spec
 )
 
@@ -78,7 +92,10 @@ product_manager_knowledge_agent = KnowledgeAugmentedPromptAgent(
 )
 
 persona_product_manager_eval = (
-    "You are an evaluation agent that checks the answers of other worker agents"
+    "You are an evaluation agent that checks the answers of other worker agents. "
+    + evaluator_scope
+    + " For this role, every user story must contain a user persona, the phrase 'I want', "
+    "an action or feature, and the phrase 'so that' followed by a benefit/value."
 )
 evaluation_criteria_product_manager = (
     "The answer should be stories that follow the following structure: "
@@ -99,7 +116,9 @@ persona_program_manager = (
     "You are a Program Manager, you are responsible for defining the features for a product."
 )
 knowledge_program_manager = (
-    "Features of a product are defined by organizing similar user stories into cohesive groups."
+    "Features of a product are defined by organizing similar user stories into cohesive groups. "
+    "Each feature must contain exactly these required field labels: Feature Name:, Description:, "
+    "Key Functionality:, and User Benefit:. Put each field on its own line."
 )
 
 program_manager_knowledge_agent = KnowledgeAugmentedPromptAgent(
@@ -109,7 +128,11 @@ program_manager_knowledge_agent = KnowledgeAugmentedPromptAgent(
 )
 
 persona_program_manager_eval = (
-    "You are an evaluation agent that checks the answers of other worker agents."
+    "You are an evaluation agent that checks the answers of other worker agents. "
+    + evaluator_scope
+    + " For this role, PASS when every feature includes Feature Name:, Description:, "
+    "Key Functionality:, and User Benefit:. Markdown bold around these labels still counts. "
+    "Do not require any additional sections."
 )
 evaluation_criteria_program_manager = (
     "The answer should be product features that follow the following structure: "
@@ -133,7 +156,10 @@ persona_dev_engineer = (
     "You are a Development Engineer, you are responsible for defining the development tasks for a product."
 )
 knowledge_dev_engineer = (
-    "Development tasks are defined by identifying what needs to be built to implement each user story."
+    "Development tasks are defined by identifying what needs to be built to implement each user story. "
+    "Each task must contain exactly these required field labels: Task ID:, Task Title:, "
+    "Related User Story:, Description:, Acceptance Criteria:, Estimated Effort:, and Dependencies:. "
+    "Put each field on its own line."
 )
 
 development_engineer_knowledge_agent = KnowledgeAugmentedPromptAgent(
@@ -143,7 +169,12 @@ development_engineer_knowledge_agent = KnowledgeAugmentedPromptAgent(
 )
 
 persona_dev_engineer_eval = (
-    "You are an evaluation agent that checks the answers of other worker agents."
+    "You are an evaluation agent that checks the answers of other worker agents. "
+    + evaluator_scope
+    + " For this role, PASS when every task includes Task ID:, Task Title:, Related User Story:, "
+    "Description:, Acceptance Criteria:, Estimated Effort:, and Dependencies:. Markdown bold "
+    "around these labels still counts. Do not require introductions, conclusions, references, "
+    "or any other sections not named in the criteria."
 )
 evaluation_criteria_dev_engineer = (
     "The answer should be tasks following this exact structure: "
@@ -174,56 +205,134 @@ workflow_context = {
 }
 
 
+def _require_evaluation_pass(evaluation_result: dict, role_name: str) -> None:
+    """Reject a specialist result unless its EvaluationAgent ended with PASS."""
+    evaluation = str(evaluation_result.get("evaluation", "")).strip()
+    verdict = evaluation.splitlines()[0].strip().strip("*` ").upper() if evaluation else ""
+    if verdict != "PASS":
+        raise RuntimeError(
+            f"{role_name} EvaluationAgent did not approve the final response. "
+            f"Final evaluation: {evaluation!r}"
+        )
+
+
+def _validate_user_story_output(text: str) -> None:
+    """Verify every generated user story follows the rubric's I-want/so-that form."""
+    stories = [block.strip() for block in text.split("\n\n") if block.strip()]
+    if not stories:
+        raise RuntimeError("Product Manager returned no user stories.")
+
+    invalid = []
+    for story in stories:
+        normalized = story.lstrip("-* ").strip()
+        if not (
+            normalized.startswith(("As a ", "As an "))
+            and ", I want " in normalized
+            and " so that " in normalized
+        ):
+            invalid.append(story)
+
+    if invalid:
+        raise RuntimeError(
+            "Product Manager output contains user stories that do not follow the required "
+            f"As a/an ..., I want ..., so that ... structure: {invalid}"
+        )
+
+
+def _validate_labeled_blocks(text: str, required_labels: tuple[str, ...], artifact: str) -> None:
+    """Verify that every feature/task block contains all rubric-required field labels."""
+    counts = {label: text.count(label) for label in required_labels}
+    first_count = counts[required_labels[0]]
+    if first_count < 1 or any(count != first_count for count in counts.values()):
+        raise RuntimeError(
+            f"{artifact} output is missing required labeled fields. Label counts: {counts}"
+        )
+
+
 # === Job-function support functions ===
 def product_manager_support_function(query: str) -> str:
-    """Generate and evaluate Product Manager user stories."""
+    """Generate, evaluate, and validate Product Manager user stories."""
     response_from_knowledge_agent = product_manager_knowledge_agent.respond(query)
     evaluation_result = product_manager_evaluation_agent.evaluate(
         query,
         initial_response=response_from_knowledge_agent,
     )
+    _require_evaluation_pass(evaluation_result, "Product Manager")
     final_response = evaluation_result["final_response"]
+    _validate_user_story_output(final_response)
     workflow_context["user_stories"] = final_response
     return final_response
 
 
 def program_manager_support_function(query: str) -> str:
-    """Generate and evaluate product features using prior user stories."""
+    """Generate, evaluate, and validate product features using prior user stories."""
+    # Because KnowledgeAugmentedPromptAgent is instructed to use only its supplied
+    # knowledge, explicitly carry the validated upstream artifact into that knowledge.
+    program_manager_knowledge_agent.knowledge = (
+        knowledge_program_manager
+        + "\n\nVALIDATED USER STORIES TO ORGANIZE:\n"
+        + workflow_context["user_stories"]
+    )
     contextual_query = (
         f"{query}\n\n"
-        "Use the following validated user stories as the items to organize into product features:\n"
-        f"{workflow_context['user_stories']}\n\n"
-        "Return one or more features using the required Feature Name, Description, "
-        "Key Functionality, and User Benefit fields."
+        "Organize the validated user stories into one or more cohesive product features. "
+        "For every feature, output Feature Name:, Description:, Key Functionality:, and "
+        "User Benefit: on separate lines."
     )
     response_from_knowledge_agent = program_manager_knowledge_agent.respond(contextual_query)
     evaluation_result = program_manager_evaluation_agent.evaluate(
         contextual_query,
         initial_response=response_from_knowledge_agent,
     )
+    _require_evaluation_pass(evaluation_result, "Program Manager")
     final_response = evaluation_result["final_response"]
+    _validate_labeled_blocks(
+        final_response,
+        ("Feature Name:", "Description:", "Key Functionality:", "User Benefit:"),
+        "Program Manager feature",
+    )
     workflow_context["features"] = final_response
     return final_response
 
 
 def development_engineer_support_function(query: str) -> str:
-    """Generate and evaluate engineering tasks using prior workflow artifacts."""
+    """Generate, evaluate, and validate engineering tasks using prior artifacts."""
+    # Carry the validated upstream artifacts into the worker's allowed knowledge so
+    # the knowledge-only constraint and the workflow dependency are fully aligned.
+    development_engineer_knowledge_agent.knowledge = (
+        knowledge_dev_engineer
+        + "\n\nVALIDATED USER STORIES:\n"
+        + workflow_context["user_stories"]
+        + "\n\nVALIDATED PRODUCT FEATURES:\n"
+        + workflow_context["features"]
+    )
     contextual_query = (
         f"{query}\n\n"
-        "Create detailed engineering tasks for the validated user stories and product features below.\n\n"
-        "VALIDATED USER STORIES:\n"
-        f"{workflow_context['user_stories']}\n\n"
-        "VALIDATED PRODUCT FEATURES:\n"
-        f"{workflow_context['features']}\n\n"
-        "Each task must include Task ID, Task Title, Related User Story, Description, "
-        "Acceptance Criteria, Estimated Effort, and Dependencies."
+        "Create one or more detailed engineering tasks for the validated artifacts. "
+        "For every task, output Task ID:, Task Title:, Related User Story:, Description:, "
+        "Acceptance Criteria:, Estimated Effort:, and Dependencies: on separate lines."
     )
     response_from_knowledge_agent = development_engineer_knowledge_agent.respond(contextual_query)
     evaluation_result = development_engineer_evaluation_agent.evaluate(
         contextual_query,
         initial_response=response_from_knowledge_agent,
     )
-    return evaluation_result["final_response"]
+    _require_evaluation_pass(evaluation_result, "Development Engineer")
+    final_response = evaluation_result["final_response"]
+    _validate_labeled_blocks(
+        final_response,
+        (
+            "Task ID:",
+            "Task Title:",
+            "Related User Story:",
+            "Description:",
+            "Acceptance Criteria:",
+            "Estimated Effort:",
+            "Dependencies:",
+        ),
+        "Development Engineer task",
+    )
+    return final_response
 
 
 # === Routing Agent ===
