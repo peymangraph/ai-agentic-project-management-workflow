@@ -9,6 +9,7 @@ workflow reusable for future product specifications.
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -81,7 +82,8 @@ knowledge_product_manager = (
     "Every story must use this exact semantic template: "
     "As a [type of user], I want [an action or feature] so that [benefit/value]. "
     "Use 'I want' and 'so that' for every story; do not substitute phrases such as "
-    "'I need', 'I expect', 'I require', or 'I seek'. "
+    "'I need', 'I expect', 'I require', 'I seek', or 'to ensure' for the required 'so that' clause. "
+    "Return each story as one complete sentence in its own paragraph. Do not number or bullet stories. "
     "Write several stories for the product specification below, where the personas are "
     "the different users of the product.\n\nPRODUCT SPECIFICATION:\n"
     + product_spec
@@ -216,6 +218,11 @@ def _evaluation_verdict(evaluation_result: dict) -> str:
     return evaluation.splitlines()[0].strip().strip("*` ").upper()
 
 
+def _strip_story_prefix(story: str) -> str:
+    """Remove harmless Markdown bullets or numeric list prefixes from a story."""
+    return re.sub(r"^\s*(?:[-*•]+\s*|\d+[.)]\s*)", "", story).strip()
+
+
 def _validate_user_story_output(text: str) -> None:
     """Verify every generated user story follows the rubric's I-want/so-that form."""
     stories = [block.strip() for block in text.split("\n\n") if block.strip()]
@@ -224,7 +231,7 @@ def _validate_user_story_output(text: str) -> None:
 
     invalid = []
     for story in stories:
-        normalized = story.lstrip("-* ").strip()
+        normalized = _strip_story_prefix(story)
         if not (
             normalized.startswith(("As a ", "As an "))
             and ", I want " in normalized
@@ -237,6 +244,56 @@ def _validate_user_story_output(text: str) -> None:
             "Product Manager output contains user stories that do not follow the required "
             f"As a/an ..., I want ..., so that ... structure: {invalid}"
         )
+
+
+def _normalize_user_story_output(text: str) -> str:
+    """Remove harmless list prefixes while preserving validated story wording."""
+    stories = [block.strip() for block in text.split("\n\n") if block.strip()]
+    return "\n\n".join(_strip_story_prefix(story) for story in stories)
+
+
+def _repair_user_story_output(draft: str, query: str) -> str:
+    """Run one focused rewrite pass when otherwise useful stories miss the exact template."""
+    print(
+        "[Validation] Product Manager: generated stories need a focused template repair. "
+        "Rewriting all stories to the exact As a/an ..., I want ..., so that ... form."
+    )
+
+    original_knowledge = product_manager_knowledge_agent.knowledge
+    product_manager_knowledge_agent.knowledge = (
+        knowledge_product_manager
+        + "\n\nDRAFT USER STORIES TO REWRITE WITHOUT CHANGING THEIR INTENT:\n"
+        + draft
+    )
+    repair_prompt = (
+        f"{query}\n\n"
+        "Rewrite every draft user story from your supplied knowledge. Preserve each story's "
+        "persona, action, and intended benefit, and do not omit any story. Every rewritten "
+        "story must be exactly one complete sentence using this semantic structure: "
+        "As a [type of user], I want [an action or feature] so that [benefit/value]. "
+        "Every story must literally contain ', I want ' and ' so that '. Do not use numbering, "
+        "bullets, headings, commentary, or alternative phrases such as 'to ensure' in place of "
+        "the required 'so that' clause. Return only the rewritten stories separated by blank lines."
+    )
+
+    try:
+        repaired_response = product_manager_knowledge_agent.respond(repair_prompt)
+    finally:
+        product_manager_knowledge_agent.knowledge = original_knowledge
+
+    repair_evaluation = product_manager_evaluation_agent.evaluate(
+        query,
+        initial_response=repaired_response,
+    )
+    repaired = _select_structurally_valid_response(
+        repaired_response,
+        repair_evaluation,
+        _validate_user_story_output,
+        "Product Manager repair",
+    )
+    repaired = _normalize_user_story_output(repaired)
+    _validate_user_story_output(repaired)
+    return repaired
 
 
 def _validate_labeled_blocks(text: str, required_labels: tuple[str, ...], artifact: str) -> None:
@@ -324,18 +381,28 @@ def _select_structurally_valid_response(
 
 # === Job-function support functions ===
 def product_manager_support_function(query: str) -> str:
-    """Generate, evaluate, and validate Product Manager user stories."""
+    """Generate, evaluate, repair if needed, and validate Product Manager user stories."""
     response_from_knowledge_agent = product_manager_knowledge_agent.respond(query)
     evaluation_result = product_manager_evaluation_agent.evaluate(
         query,
         initial_response=response_from_knowledge_agent,
     )
-    final_response = _select_structurally_valid_response(
-        response_from_knowledge_agent,
-        evaluation_result,
-        _validate_user_story_output,
-        "Product Manager",
-    )
+
+    try:
+        final_response = _select_structurally_valid_response(
+            response_from_knowledge_agent,
+            evaluation_result,
+            _validate_user_story_output,
+            "Product Manager",
+        )
+        final_response = _normalize_user_story_output(final_response)
+    except RuntimeError:
+        repair_source = str(evaluation_result.get("final_response", "")).strip()
+        if not repair_source:
+            repair_source = response_from_knowledge_agent
+        final_response = _repair_user_story_output(repair_source, query)
+
+    _validate_user_story_output(final_response)
     workflow_context["user_stories"] = final_response
     return final_response
 
