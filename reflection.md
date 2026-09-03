@@ -8,6 +8,18 @@ A second strength is output quality control. Product Manager, Program Manager, a
 
 The agent classes are reusable beyond the Email Router pilot. Their public interfaces are generic: prompt agents return text, the Evaluation Agent returns a structured dictionary, the Routing Agent accepts route dictionaries, and the Action Planning Agent returns a list of steps. A different product specification can therefore reuse the same workflow architecture with limited changes to personas, knowledge, routes, and the high-level workflow prompt.
 
+## Standout Adaptability Demonstration
+
+The optional `phase_2/standout_demo.py` demonstrates that the same agentic architecture can adapt to a different planning emphasis without replacing the primary grading workflow. The required run remains a complete Email Router development plan. The alternate run changes only the high-level objective and planning emphasis to security and compliance, asking the same ActionPlanningAgent, RoutingAgent, Product Manager, Program Manager, Development Engineer, and EvaluationAgents to focus on privacy, access control, auditability, safe email handling, operational resilience, and regulatory compliance.
+
+The alternate demonstration is saved separately in `submission_outputs/09-standout-alternate-workflow.txt`, so it does not overwrite the mandatory Phase 2 evidence. The comparison is useful because the orchestration pattern remains the same while the planner wording and specialist outputs adapt to the new objective.
+
+## Supplemental Structured Quality Scoring
+
+The project also includes `phase_2/quality_scoring.py`, a deterministic scoring layer for Product Manager output. It supplements rather than replaces the rubric-required EvaluationAgent. Four dimensions are reported: format compliance, completeness, traceability to the supplied product specification, and clarity. Each dimension contributes up to 25 points for a 100-point total, and the supplemental decision requires at least 75/100 plus full format-compliance credit.
+
+This additional score addresses a practical limitation observed during testing: an LLM evaluator can sometimes produce an incorrect PASS/FAIL judgment even at temperature 0. The mandatory evaluator loop is preserved, while the transparent deterministic score provides a second reviewer-friendly quality signal without changing the required EvaluationAgent return fields.
+
 ## Limitations
 
 The workflow still depends on LLM consistency. Even with evaluation criteria, a model can occasionally produce formatting variations, incomplete artifacts, or an action plan whose steps are phrased differently than expected. Routing is based on semantic similarity between a step and route descriptions, so ambiguous steps may be routed to the wrong specialist. The current Evaluation Agent also relies on an LLM to judge another LLM, which can introduce evaluator variability despite using temperature 0.
